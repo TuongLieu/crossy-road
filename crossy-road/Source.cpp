@@ -1,15 +1,15 @@
-﻿#include<iostream>
-#include<conio.h>
+#include<iostream>
 #include<thread>
 #include<Windows.h>
 #include<time.h>
-#include<vector>
 #include<string>
 #include<fstream>
+#include<vector>
+#include<conio.h>
 using namespace std;
 //Hằng số
 #define MAX_CAR 17
-#define MAX_CAR_LENGTH 20
+#define MAX_CAR_LENGTH 10
 #define MAX_SPEED 3
 //Biến toàn cục
 POINT** X; //Mảng chứa MAX_CAR xe
@@ -19,19 +19,12 @@ int MOVING;//Biến xác định hướng di chuyển của người
 int SPEED;// Tốc độ xe chạy (xem như level)
 int HEIGH_CONSOLE = 20, WIDTH_CONSOLE = 110;// Độ rộng và độ cao của màn hình console
 bool STATE; // Trạng thái sống/chết của người qua đường
-vector<int> vitriYcu;
-typedef struct  
+int *vitriYcu = new int[WIDTH_CONSOLE];
+typedef struct
 {
 	int x, y;
 	string data;
 }Menu;
-typedef struct{
-	int xPos;
-	int yPos;
-	int level;
-
-}sPlayer;
-
 void FixConsoleWindow()
 {
 	HWND consoleWindow = GetConsoleWindow();
@@ -46,30 +39,6 @@ void GotoXY(int x, int y)
 	coord.X = x;
 	coord.Y = y;
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-}
-void textcolor(int x)
-{
-	HANDLE mau;
-	mau = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleTextAttribute(mau, x);
-}
-void AnConTro()
-{
-	HANDLE hOut;
-	CONSOLE_CURSOR_INFO ConCurInf;
-	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	ConCurInf.dwSize = 10;
-	ConCurInf.bVisible = FALSE;
-	SetConsoleCursorInfo(hOut, &ConCurInf);
-}
-void HienConTro()
-{
-	HANDLE hOut;
-	CONSOLE_CURSOR_INFO ConCurInf;
-	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	ConCurInf.dwSize = 10;
-	ConCurInf.bVisible = TRUE;
-	SetConsoleCursorInfo(hOut, &ConCurInf);
 }
 void clrscr()
 {
@@ -187,10 +156,11 @@ void DrawSticker(const POINT& p, char* s)
 	printf(s);
 
 }
-//Hàm kiểm tra xem người qua đường có đụng xe không
 
+//Hàm kiểm tra xem người qua đường có đụng xe không
 bool IsImpact(const POINT& p, int d)
 {
+	
 	if (d == 1 || d == 19)return false;
 	for (int i = 0; i < MAX_CAR_LENGTH; i++)
 	{
@@ -198,25 +168,45 @@ bool IsImpact(const POINT& p, int d)
 	}
 	return false;
 }
-void hieu_ung(int x, int y,string s,int color)
+void IsImpactwith_Y(POINT Y,int *vitriYcu)
 {
-	GotoXY(x, y);
-	textcolor(color);
-	cout << s;
-	textcolor(7);
+	if (Y.y == 1)
+	{
+		if (vitriYcu[Y.x] == 1)
+		{
+			if (*(vitriYcu + Y.x) == 1)
+			{
+				int i = 0;
+				while (i < WIDTH_CONSOLE + 1)
+				{
+					if (*(vitriYcu + i) == 1)
+					{
+						*(vitriYcu + i) = { NULL };
+					}
+					i++;
+				}
+				
+				ProcessDead();
+			}
+		}
+		else
+		{
+			vitriYcu[Y.x] = 1;
 
+		}
+	}
 }
+void MoveCars() {
+	srand(time(NULL));
+	int dong = rand() % MAX_CAR;
 
-void MoveCars() 
-{
-	
 	for (int i = 1; i < MAX_CAR; i += 2)
 	{
+		if (i == dong)break;
 		cnt = 0;
 		do {
 			cnt++;
-			for (int j = 0; j < MAX_CAR_LENGTH - 1; j++) 
-			{
+			for (int j = 0; j < MAX_CAR_LENGTH - 1; j++) {
 				X[i][j] = X[i][j + 1];
 
 			}
@@ -224,10 +214,9 @@ void MoveCars()
 
 		} while (cnt < SPEED);
 	}
-
-
 	for (int i = 0; i < MAX_CAR; i += 2)
 	{
+		if (i == dong)break;
 		cnt = 0;
 		do {
 			cnt++;
@@ -267,13 +256,6 @@ void EraseCars()
 
 		} while (cnt < SPEED);
 
-	}
-}
-void Stop_car()
-{	
-	for (int j = 0; j < MAX_CAR_LENGTH; j++)
-	{
-		X[2]
 	}
 }
 void MoveRight()
@@ -316,26 +298,22 @@ void MoveUp()
 		DrawSticker(Y, "Y");
 	}
 }
+void textcolor(int x)
+{
+	HANDLE mau;
+	mau = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(mau, x);
+}
+void hieu_ung(int x, int y, string s, int color)
+{
+	GotoXY(x, y);
+	textcolor(color);
+	cout << s;
+	textcolor(7);
 
-void Luu_toa_do_x( POINT &p, vector <int> &vitriYcu)
-{
-	if (p.y == 1)
-	{
-		vitriYcu.push_back(p.x);
-	}
 }
-bool IsImpactWithY(POINT &p, vector<int> vitriYcu)
-{
-	
-		for (int i = 0; i < vitriYcu.size(); i++)
-		{
-			if (p.x == vitriYcu[i])
-			{
-				return true;
-			}
-		}	
-	return false;
-}
+
+
 void SubThread()
 {
 	while (1)
@@ -359,30 +337,18 @@ void SubThread()
 			}
 			MOVING = ' ';// Tạm khóa không cho di chuyển, chờ nhận phím từ hàm main
 			EraseCars();
-			//Stop_car();
 			MoveCars();
 			DrawCars(".");
-			
 			if (IsImpact(Y, Y.y))
 			{
-				hieu_ung(Y.x, Y.y,"(@.@)    OUCH !!!",14);
+				hieu_ung(Y.x, Y.y, "(T.T)    OUCH !!!", 14);
 				ProcessDead(); // Kiểm tra xe có đụng không
 			}
 			if (Y.y == 1)
 			{
-				Luu_toa_do_x(Y, vitriYcu);
-				if (SPEED>1)
-				{
-					bool kt = IsImpactWithY(Y, vitriYcu);
-					if (kt == 1)
-					{
-						ProcessDead();
-					}
-				}
-				else{
-					ProcessFinish(Y); // Kiểm tra xem về đích chưa
-				}
 				
+				IsImpactwith_Y(Y, vitriYcu);
+				ProcessFinish(Y); // Kiểm tra xem về đích chưa
 
 			}
 
@@ -447,172 +413,215 @@ void Draw_Text(string filename)
 
 	FileIn.close();
 }
-void save_in_struct(POINT &p,sPlayer& save)
+int Save_game(string link)
 {
-	save.xPos = p.x;
-	save.yPos = p.y;
-	save.level = SPEED;
-}
-void Save(sPlayer save,vector<int>viytiYcu)
-{
+	ofstream fo;
+	fo.open(link, ios::out);
 	
-	string filename;
-	cout << "\nNhap ten tap tin muon luu: ";
-	
-	fflush(stdin);
-	GotoXY(0, 26); getline(cin, filename);
-	filename += ".txt";
-
-	ofstream fo(filename, ios::out);
-	if (fo.fail())
+	if (!fo.fail())
 	{
-		cout << "\n ERROR WITH FILE.";
+		fo << SPEED << endl;
+		for (int i = 1; i < MAX_CAR_LENGTH; i++)
+		{
+			if (vitriYcu[i] == 1)
+			{
+				fo << i;
+			}
+		}
+		
+		fo.close();
+		return 1;
 	}
-
-	for (int i = 0; i < vitriYcu.size(); i++)
-	{
-		fo << vitriYcu[i] << "\t\t";		
-	}
-	fo << "\n\n";
-	fo << save.level << "\t\t" << save.xPos << "\t\t" << save.yPos;
-
-	fo.close();
+	return 0;
 }
-void Load_game(string filename,vector<int>vitriYcu)
+int Load_game(string link)
 {
-	ifstream fi(filename, ios::in);
+	ifstream fi;
+	fi.open(link, ios::in);
 	if (fi.fail())
 	{
-		cout << "ERROR.";
+		cout << "\nCAN'T OPEN FILE";
+		return 0;
 	}
-	int x;
-	while (fi >> x)
+	else{
+		GotoXY(Y.x, Y.y); cout << " ";
+		fi >> SPEED >> Y.x >> Y.y;
+		fi.close();
+		return 1;
+	}
+}
+
+
+void AnConTro()
+{
+	HANDLE hOut;
+	CONSOLE_CURSOR_INFO ConCurInf;
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	ConCurInf.dwSize = 10;
+	ConCurInf.bVisible = FALSE;
+	SetConsoleCursorInfo(hOut, &ConCurInf);
+}
+void HienConTro()
+{
+	HANDLE hOut;
+	CONSOLE_CURSOR_INFO ConCurInf;
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	ConCurInf.dwSize = 10;
+	ConCurInf.bVisible = TRUE;
+	SetConsoleCursorInfo(hOut, &ConCurInf);
+}
+
+
+void main()
+{
+	int temp;
+	FixConsoleWindow();
+	AnConTro();
+	vector <Menu> list;
+	menu(list);
+	while (1)
 	{
-		if (x != '\n')
+
+		textcolor(14);
+		Draw_Text("ascii_generator.txt");
+		In_menu(list);
+		textcolor(7);
+		if (_kbhit())
 		{
-			vitriYcu.push_back(x);
+			char key = _getch();
+			if (key == 't')//load game
+			{
+				hieu_ung(52, 18, ">>", 14);
+				Sleep(500);
+				string filename;
+				GotoXY(52, 22); cout << "\nEnter file name: ";
+				fflush(stdin);
+				getline(cin, filename);
+				filename += ".txt";
+
+				Load_game(filename);
+
+
+
+
+
+			}
+			else if (key == 'e')
+			{
+				hieu_ung(52, 20, ">>", 14);
+				Sleep(500);
+				exit(0);
+			}
+			else if (key == 'c')
+			{
+				hieu_ung(52, 16, ">>", 14);
+				Sleep(500);
+				srand(time(NULL));
+				StartGame();
+				thread t1(SubThread);
+
+				while (1)
+				{
+
+					temp = toupper(_getch());
+					if (STATE == 1)
+					{
+						if (temp == 27) {
+							ExitGame(t1.native_handle());
+							return;
+
+						}
+						else if (temp == 'P')
+						{
+							PauseGame(t1.native_handle());
+
+						}
+						else if (temp == 'L')
+						{
+							PauseGame(t1.native_handle());
+							string filename;
+							GotoXY(0, 25); cout << "Enter file name to save: ";
+							fflush(stdin);
+							GotoXY(30, 25); getline(cin, filename);
+							filename += ".txt";
+
+							Save_game(filename);
+
+							GotoXY(0, 26); cout << "Saved.";
+
+							Sleep(400);
+							for (int i = 0; i < 60; i++)
+							{
+								GotoXY(i, 25); cout << " ";
+								GotoXY(i, 26); cout << " ";
+							}
+
+						}
+						else
+						{
+							ResumeThread((HANDLE)t1.native_handle());
+							if (temp == 'D' || temp == 'A' || temp == 'W' || temp == 'S')
+							{
+								MOVING = temp;
+							}
+
+						}
+					}
+
+
+
+					else//khi Y chet
+					{
+						if (temp == 'Y') StartGame();
+						else {
+							ExitGame(t1.native_handle());
+							return;
+
+						}
+					}
+
+				}
+			}
 		}
-		else
-		{
-			
-		}
+
 	}
-
-
 
 }
- void main()
- {		
-			 int temp;
-			 string gamefile;
-			 FixConsoleWindow();
-			 AnConTro();
-			 vector <Menu> list;
-			 sPlayer save;
-			 menu(list);
-			 while (1)
-			 {
-		
-				 textcolor(14);
-				 Draw_Text("ascii_generator.txt");
-				 In_menu(list);
-				 textcolor(7);
-				 if (_kbhit())
-				 {
-					 char key = _getch();
-					 if (key == 'T' || key == 't')
-					 {
-						 hieu_ung(52, 18, ">>", 14);
-						 Sleep(500);
-						 cout << "\nNhap ten tap tin: ";
-						 fflush(stdin);
-						 getline(cin, gamefile);
-						 gamefile += ".txt";
 
-						 ifstream fi(gamefile, ios::in);
+/*srand(time(NULL));
+StartGame();
+thread t1(SubThread);
+while (1)
+{
+temp = toupper(_getch());
+if (STATE == 1)
+{
+if (temp == 27) {
+ExitGame(t1.native_handle());
+return;
 
+}
+else if (temp == 'P') {
+PauseGame(t1.native_handle());
 
-						
+}
+else {
+ResumeThread((HANDLE)t1.native_handle());
+if (temp == 'D' || temp == 'A' || temp == 'W' || temp == 'S')
+{
+MOVING = temp;
+}
 
-					 }
-					 else if (key == 'E' || key == 'e')
-					 {
-						 hieu_ung(52, 20, ">>", 14);
-						 Sleep(500);
-						 exit(0);
-					 }
-					 else if (key == 'C' || key == 'c')
-					 {
-						 hieu_ung(52, 16, ">>", 14);
-						 Sleep(500);
-						 srand(time(NULL));
-						 StartGame();
-						 thread t1(SubThread);
+}
+}
+else
+{
+if (temp == 'Y') StartGame();
+else {
+ExitGame(t1.native_handle());
+return;
 
-						 while (1)
-						 {
-
-							 temp = toupper(_getch());
-							 if (STATE == 1)
-							 {
-								 if (temp == 27) {
-									 ExitGame(t1.native_handle());
-									 return;
-
-								 }
-								 else if (temp == 'P') 
-								 {
-									 PauseGame(t1.native_handle());
-
-								 }
-								 else if (temp == 'L')
-								 {
-									
-									 save_in_struct(Y,save);
-									 GotoXY(0, 25);
-									 Save(save, vitriYcu);
-
-									 
-								 }
-								 else 
-								 {
-									 ResumeThread((HANDLE)t1.native_handle());
-									 if (temp == 'D' || temp == 'A' || temp == 'W' || temp == 'S')
-									 {
-										 MOVING = temp;
-									 }
-
-								 }
-							 }
-
-							 
-							 
-							 else//khi Y chet
-							 {
-								 if (temp == 'Y') StartGame();
-								 else {
-									 ExitGame(t1.native_handle());
-									 return;
-
-								 }
-							 }
-
-						 }
-					 }
-				 }
-
-			 }
-			 
-		 }
-	 
-	 
- 
-	
-
-
-
-
-
-
-
-
+}
+}
+}
+}*/
