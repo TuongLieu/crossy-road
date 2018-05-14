@@ -20,6 +20,8 @@ int SPEED;// Tốc độ xe chạy (xem như level)
 int HEIGH_CONSOLE = 20, WIDTH_CONSOLE = 110;// Độ rộng và độ cao của màn hình console
 bool STATE; // Trạng thái sống/chết của người qua đường
 int *vitriYcu = new int[WIDTH_CONSOLE];
+string filename;
+int Load_bool;
 typedef struct
 {
 	int x, y;
@@ -60,6 +62,13 @@ void ResetData()
 	MOVING = 'D'; // Ban đầu cho người di chuyển sang phải
 	SPEED = 1; // Tốc độ lúc đầu
 	Y = { 18, 19 }; // Vị trí lúc đầu của người
+	//reset mang vi tri Y cu
+	int i = 0;
+	while (i < WIDTH_CONSOLE)
+	{
+		*(vitriYcu + i) = NULL;
+		i++;
+	}
 	// Tạo mảng xe chạy
 	if (X == NULL)
 	{
@@ -124,9 +133,12 @@ void PauseGame(HANDLE t)
 //Hàm xử lý khi người đụng xe
 void ProcessDead()
 {
+
+
 	STATE = 0;
 	GotoXY(0, HEIGH_CONSOLE + 5);
 	cout << "Dead, type y to continue or anykey to exit";
+
 }
 //Hàm xử lý khi người băng qua đường thành công
 void ProcessFinish(POINT& p)
@@ -160,7 +172,7 @@ void DrawSticker(const POINT& p, char* s)
 //Hàm kiểm tra xem người qua đường có đụng xe không
 bool IsImpact(const POINT& p, int d)
 {
-	
+
 	if (d == 1 || d == 19)return false;
 	for (int i = 0; i < MAX_CAR_LENGTH; i++)
 	{
@@ -168,7 +180,7 @@ bool IsImpact(const POINT& p, int d)
 	}
 	return false;
 }
-void IsImpactwith_Y(POINT Y,int *vitriYcu)
+void IsImpactwith_Y(POINT Y, int *vitriYcu)
 {
 	if (Y.y == 1)
 	{
@@ -185,7 +197,7 @@ void IsImpactwith_Y(POINT Y,int *vitriYcu)
 					}
 					i++;
 				}
-				
+
 				ProcessDead();
 			}
 		}
@@ -346,7 +358,7 @@ void SubThread()
 			}
 			if (Y.y == 1)
 			{
-				
+
 				IsImpactwith_Y(Y, vitriYcu);
 				ProcessFinish(Y); // Kiểm tra xem về đích chưa
 
@@ -415,27 +427,96 @@ void Draw_Text(string filename)
 }
 int Save_game(string link)
 {
+
 	ofstream fo;
 	fo.open(link, ios::out);
-	
+
 	if (!fo.fail())
 	{
 		fo << SPEED << endl;
-		for (int i = 1; i < MAX_CAR_LENGTH; i++)
+		for (int i = 1; i < WIDTH_CONSOLE; i++)
 		{
 			if (vitriYcu[i] == 1)
 			{
-				fo << i;
+				fo << i << endl;
 			}
 		}
-		
+
 		fo.close();
 		return 1;
 	}
 	return 0;
 }
+void Select()
+{
+	thread t1(SubThread);
+	while (1)
+	{
+
+		int temp = toupper(_getch());
+		if (STATE == 1)
+		{
+			if (temp == 27) {
+				ExitGame(t1.native_handle());
+				exit(0);
+
+			}
+			else if (temp == 'P')
+			{
+				PauseGame(t1.native_handle());
+
+			}
+			else if (temp == 'L')
+			{
+				PauseGame(t1.native_handle());
+				string filename;
+				GotoXY(0, 25); cout << "Enter file name to save: ";
+				fflush(stdin);
+				GotoXY(30, 25); getline(cin, filename);
+				filename += ".txt";
+
+				Save_game(filename);
+
+				GotoXY(0, 26); cout << "Saved.";
+
+				Sleep(400);
+				for (int i = 0; i < 60; i++)
+				{
+					GotoXY(i, 25); cout << " ";
+					GotoXY(i, 26); cout << " ";
+				}
+
+			}
+
+
+			else
+			{
+				ResumeThread((HANDLE)t1.native_handle());
+				if (temp == 'D' || temp == 'A' || temp == 'W' || temp == 'S')
+				{
+					MOVING = temp;
+				}
+
+			}
+		}
+
+
+
+		else//khi Y chet
+		{
+			if (temp == 'Y') StartGame();
+			else {
+				ExitGame(t1.native_handle());
+				exit(0);
+
+			}
+		}
+
+	}
+}
 int Load_game(string link)
 {
+	Load_bool = 1;
 	ifstream fi;
 	fi.open(link, ios::in);
 	if (fi.fail())
@@ -443,12 +524,24 @@ int Load_game(string link)
 		cout << "\nCAN'T OPEN FILE";
 		return 0;
 	}
-	else{
-		GotoXY(Y.x, Y.y); cout << " ";
-		fi >> SPEED >> Y.x >> Y.y;
-		fi.close();
-		return 1;
+	else
+	{
+
+		fi >> SPEED;
+		SPEED = SPEED - 1;
+		int x;
+		while (!fi.eof())
+		{
+			fi >> x;
+			*(vitriYcu + x) = 1;
+			Y = { x, 1 };
+			DrawSticker(Y, "Y");
+
+
+		}
 	}
+	fi.close();
+
 }
 
 
@@ -493,19 +586,21 @@ void main()
 			{
 				hieu_ung(52, 18, ">>", 14);
 				Sleep(500);
-				string filename;
+
 				GotoXY(52, 22); cout << "\nEnter file name: ";
 				fflush(stdin);
 				getline(cin, filename);
 				filename += ".txt";
 
-				Load_game(filename);
-
-
-
+				srand(time(NULL));
+				StartGame();
+				Load_game(filename); Select();
 
 
 			}
+
+
+
 			else if (key == 'e')
 			{
 				hieu_ung(52, 20, ">>", 14);
@@ -528,7 +623,7 @@ void main()
 					{
 						if (temp == 27) {
 							ExitGame(t1.native_handle());
-							return;
+							exit(0);
 
 						}
 						else if (temp == 'P')
@@ -539,7 +634,7 @@ void main()
 						else if (temp == 'L')
 						{
 							PauseGame(t1.native_handle());
-							string filename;
+
 							GotoXY(0, 25); cout << "Enter file name to save: ";
 							fflush(stdin);
 							GotoXY(30, 25); getline(cin, filename);
@@ -549,7 +644,7 @@ void main()
 
 							GotoXY(0, 26); cout << "Saved.";
 
-							Sleep(400);
+							Sleep(500);
 							for (int i = 0; i < 60; i++)
 							{
 								GotoXY(i, 25); cout << " ";
@@ -557,6 +652,23 @@ void main()
 							}
 
 						}
+						else if (temp == 'T')
+						{
+							PauseGame(t1.native_handle());
+							GotoXY(0, 24); cout << "\nEnter file name: ";
+							fflush(stdin);
+							getline(cin, filename);
+							filename += ".txt";
+							Sleep(500);
+							for (int i = 0; i < 60; i++)
+							{
+								GotoXY(i, 24); cout << " ";
+							}
+							StartGame();
+							Load_game(filename);
+
+						}
+
 						else
 						{
 							ResumeThread((HANDLE)t1.native_handle());
@@ -572,10 +684,25 @@ void main()
 
 					else//khi Y chet
 					{
-						if (temp == 'Y') StartGame();
+						if (temp == 'Y')
+						{
+							if (Load_bool == 1)
+							{
+								StartGame();
+								Load_game("tuonglieu.txt");
+							}
+							else
+							{
+								StartGame();
+
+							}
+
+
+						}
+
 						else {
 							ExitGame(t1.native_handle());
-							return;
+							exit(0);
 
 						}
 					}
@@ -585,43 +712,6 @@ void main()
 		}
 
 	}
-
 }
 
-/*srand(time(NULL));
-StartGame();
-thread t1(SubThread);
-while (1)
-{
-temp = toupper(_getch());
-if (STATE == 1)
-{
-if (temp == 27) {
-ExitGame(t1.native_handle());
-return;
 
-}
-else if (temp == 'P') {
-PauseGame(t1.native_handle());
-
-}
-else {
-ResumeThread((HANDLE)t1.native_handle());
-if (temp == 'D' || temp == 'A' || temp == 'W' || temp == 'S')
-{
-MOVING = temp;
-}
-
-}
-}
-else
-{
-if (temp == 'Y') StartGame();
-else {
-ExitGame(t1.native_handle());
-return;
-
-}
-}
-}
-}*/
